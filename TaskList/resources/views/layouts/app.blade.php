@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<meta charset="utf-8">
 	<title>TaskList</title>
 	<link rel="stylesheet" href="/css/app.css">
 	<style>
 		.container {
-			margin-top: 55;
+			margin-top: 80;
 		}
 	</style>
 </head>
