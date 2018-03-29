@@ -3,9 +3,17 @@
 <head>
 	<title>TaskList</title>
 	<link rel="stylesheet" href="/css/app.css">
+	<style>
+		.container {
+			margin-top: 55;
+		}
+	</style>
 </head>
 <body>
+	@include('inc.navbar')
    <div class="container">
+      @include('inc.messages')
+
    	  @yield('content')
    </div>
 
