@@ -78,7 +78,9 @@ class TasksController extends Controller
      */
     public function edit($id)
     {
-        //
+        $task = Task::find($id);
+
+        return view('tasks.edit')->with('task', $task);
     }
 
     /**
@@ -90,7 +92,17 @@ class TasksController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $task = Task::find($id);
+
+        $task->text = $request->input('text');
+        $task->body = $request->input('body');
+        $task->due = $request->input('due');
+
+      // var_dump($task);    
+      // die();
+      $task->save();    
+
+        return redirect('/')->with('success' , 'Task has been successfully updated!');
     }
 
     /**
@@ -101,6 +113,10 @@ class TasksController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $task = Task::find($id);
+
+        $task->delete();
+
+        return redirect('/')->with('success' , 'Task has been successfully deleted');
     }
 }
