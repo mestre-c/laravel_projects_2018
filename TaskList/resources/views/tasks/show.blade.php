@@ -11,7 +11,10 @@
   <p style="font-size: 20px;">{{ $task->body }}</p>
   <br /><br />
     <a href="/task/{{ $task->id }}/edit">
-     <button class="btn btn-default" type="button">Edit</button>
+     <button class="btn btn-info" type="button">Edit</button>
     </a>
-
+    {!! Form::open(['action' => [ 'TasksController@destroy', $task->id ], 'method' => 'POST', 'class' => 'float-right']) !!}
+    {{ Form::hidden('_method','DELETE') }}
+    {{ Form::bsSubmit('Delete', ['class' => 'btn btn-danger']) }} <!-- just a submit button -->
+    {!! Form::close() !!}
 @endsection

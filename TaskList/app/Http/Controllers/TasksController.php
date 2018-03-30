@@ -37,7 +37,24 @@ class TasksController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->validate($request, [
+         
+         'text' => 'required|min:10',
+         'body' => 'required|max:255',
+         'due' => 'required'
+
+        ]);
+
+        // create tasks
+        $task = new Task;
+
+        $task->text = $request->input('text');
+        $task->body = $request->input('body');
+        $task->due = $request->input('due');
+
+        $task->save();
+
+        return redirect('/')->with('success', 'Task Created successfully!');
     }
 
     /**
