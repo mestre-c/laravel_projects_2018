@@ -7,29 +7,48 @@ use Illuminate\Http\Request;
 use Artisan;
 use Log;
 use Storage;
+use DB;
+use App\Post;
+use App\User;
 
 class BackupsController extends Controller
 {
+   public function lockDatabaseTables()
+    {
+
+        // lock all tables
+        DB::unprepared('FLUSH TABLES WITH READ LOCK;');
+        
+        return redirect()->action('BackupsController@backup');
+    }
+    
     // This method backups up db tables
     public function backup()
     {
+        // run the artisan command to backup the db using the spatie package
+        Artisan::call('backup:run', ['--only-db' => true]);  
         
-        // lock all tables
-        DB::unprepared('FLUSH TABLES WITH READ LOCK;');
-
-        // run the artisan command to backup the db using the package I linked to
-        Artisan::call('backup:run', ['--only-db' => true]);  // something like this
-
+        return redirect()->action('BackupsController@unlockAndCleanDatabaseTables');
+    }
+    
+    // unlock tables and clean up backup-temp file
+    public function unlockAndCleanDatabaseTables()
+    {
         // unlock all tables
         DB::unprepared('UNLOCK TABLES');
-        
-        return redirect()->action('BackupsController@stopBackup');
-    }
 
-    public function stopBackup() 
-    {
-        Artisan::call('backup:run', ['--only-db' => true]);
+        Artisan::call('backup:clean');
         $output = Artisan::output();
         dump($output);
+        
+        $numTables = DB::select('SHOW TABLES');
+        $countUserRecords = User::count();
+        $countPostRecords = Post::count();
+
+       	return view('result', 
+       		compact('numTables', 'countUserRecords', 'countPostRecords'));
+
+        //return redirect()->action('BackupsController@cleanBackup');
+
     }
 }

@@ -56,7 +56,7 @@ return [
             /*
              * The filename prefix used for the backup zip file.
              */
-            'filename_prefix' => 'backup-[DATE-TIME]',
+            'filename_prefix' => 'backup-',
 
             /*
              * The disk names on which the backups will be stored.
@@ -92,7 +92,7 @@ return [
         'notifiable' => \Spatie\Backup\Notifications\Notifiable::class,
 
         'mail' => [
-            'to' => 'mestrecaito@hotmail.com',
+            'to' => 'capfer27@gmail.com',
         ],
 
         'slack' => [
