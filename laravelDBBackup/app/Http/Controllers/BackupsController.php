@@ -25,8 +25,12 @@ class BackupsController extends Controller
     // This method backups up db tables
     public function backup()
     {
+        // Line 32 to 33 are optional. 
+        // They are just for debugging purposes. So you can delete them if you wish.
         // run the artisan command to backup the db using the spatie package
-        Artisan::call('backup:run', ['--only-db' => true]);  
+        Artisan::call('backup:run', ['--only-db' => true]); 
+        $output = Artisan::output();
+        dump($output); 
         
         return redirect()->action('BackupsController@unlockAndCleanDatabaseTables');
     }
@@ -36,7 +40,9 @@ class BackupsController extends Controller
     {
         // unlock all tables
         DB::unprepared('UNLOCK TABLES');
-
+        
+        // Line 46 to 48 are optional. 
+        // They are just for debugging purposes. So you can delete them if you wish. 
         Artisan::call('backup:clean');
         $output = Artisan::output();
         dump($output);
