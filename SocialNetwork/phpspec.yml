@@ -1,0 +1,5 @@
+suites:
+    main:
+        namespace: SocialNetwork
+        psr4_prefix: SocialNetwork
+        src_path: app
