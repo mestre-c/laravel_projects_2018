@@ -11,6 +11,10 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [
+
+	'uses' => '\SocialNetwork\Http\Controllers\HomeController@index',
+	'as' => 'home',
+
+
+]);
