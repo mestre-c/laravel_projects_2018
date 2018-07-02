@@ -22,8 +22,8 @@
      <div class="checkbox">
       <label>
         <input type="checkbox" class="checkbox_table" name="table[]" 
-        value="{{ $table['Tables_in_sampleBackup'] }}" /> 
-        {{ $table['Tables_in_sampleBackup'] }}
+        value="{{ $table['Tables_in_backup'] }}" /> 
+        {{ $table['Tables_in_backup'] }}
       </label>
      </div>
     @endforeach 

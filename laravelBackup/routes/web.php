@@ -10,8 +10,9 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
+use App\Post;
 
-Route::get('/populate', function () {
+Route::get('/fill', function () {
 
 	$faker  = \Faker\Factory::create();
 
@@ -27,8 +28,8 @@ Route::get('/populate', function () {
 	// create 20 users with just one line
 	$users = factory(App\User::class, 20)->create();
     
-    return view('backup');
+    return ;
 });
 
-Route::get('/backup', 'BackupsController@create');
-Route::post('/backup', 'BackupsController@backup');
+Route::get('/backup', 'BackupController@create');
+Route::post('/backup', 'BackupController@backup');
