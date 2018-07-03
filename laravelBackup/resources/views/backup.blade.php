@@ -15,7 +15,13 @@
       {{ csrf_field() }}
 
      <h3>Select Tables for Backup</h3>
-     <h4>Number of Tables: {{ count($numTables) }}</h4>
+     <h4>Tables Info</h4>
+     <!-- <h4>Number of Tables: {{ count($numTables) }}</h4> -->
+     <ul>
+      <li>{{ count($numTables) }} tables affected!</li>
+      <li>User table:{{ $countUserRecords }} records</li>
+      <li>Post table:{{ $countPostRecords }} records</li>
+     </ul>
       
     
     @foreach($numTables as $table)

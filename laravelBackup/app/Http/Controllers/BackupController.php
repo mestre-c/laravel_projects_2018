@@ -16,29 +16,27 @@ use App\User;
 class BackupController extends Controller
 {
 
-    public function lockDatabaseTables()
+    public function lockTable()
     {
-
         // lock all tables
         DB::unprepared('FLUSH TABLES WITH READ LOCK;');
         
-        return redirect()->action('BackupsController@backup');
+        // return redirect()->action('BackupsController@backup');
+    }
+
+    public function unlockTable()
+    {
+        // unlock all tables
+        DB::unprepared('UNLOCK TABLES');
     }
 
     public function queryFetch($data)
     {
         $pdo  = DB::connection()->getPdo();
-        $stmt = $pdo->query($data);
+        $stmt = $pdo->prepare($data);
+        $stmt->execute();
+        // $stmt = $pdo->query($data);
         $results = $stmt->fetch();
-        return $results;
-    }
-
-
-    public function queryFetchAll($data)
-    {
-        $pdo  = DB::connection()->getPdo();
-        $stmt = $pdo->query($data);
-        $results = $stmt->fetchAll();
         return $results;
     }
 
@@ -48,10 +46,10 @@ class BackupController extends Controller
 
         $numTables = DB::select("SHOW TABLES");
         // $numTables = $this->query("SHOW TABLES");
-        // $countUserRecords = User::count();
-        // $countPostRecords = Post::count();
- 		// dd($numTables);
-        return view('backup', compact('numTables'));
+        $countUserRecords = User::count();
+        $countPostRecords = Post::count();
+ 		
+        return view('backup', compact('numTables','countUserRecords', 'countPostRecords'));
     }
 
     public function setPDOMode()
@@ -69,44 +67,29 @@ class BackupController extends Controller
 
     		$output = '';
 
-    		foreach ($tables as $key => $table) {
-    		
+    		foreach ($tables as $key => $table) 
+            {   
+                $this->lockTable();
+
     			$show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
-    			
-    			var_dump($show_table_query);
 
     			$output .="\n" . $show_table_query[1] . ";\n";
     			// $output .="\n" . $show_table_query[1];
 
+                $this->setPDOMode();
+	    		$single_result = DB::select("SELECT * FROM {$table}");
 
-	    		$single_result = $this->queryFetch("SELECT * FROM {$table}");
-	    		// var_dump($single_result);
+                $output .= $this->getTableData($single_result, $table);
 
-	    		$table_column_array = array_keys(array_unique($single_result));
-	    		$table_value_array = array_values(array_unique($single_result));
-
-	    	    // var_dump($table_column_array);
-	    		// var_dump($table_value_array);
-
-	    		$output .= "\nINSERT INTO $table("; // MAKE DYNAMIC INSERT
-	    		$output .= "" .implode(", ", $table_column_array) . ") VALUES(";
-	    		$output .= "'" . implode("','", $table_value_array) . "');\n";
-
-	    		// var_dump($output); 
-
-	    		$this->downloadFile($output);
-
-    		}
-
-    		// $output .= "\INSERT INTO $table("; // MAKE DYNAMIC INSERT
-	    	// $output .= "" .implode(", ", $table_column_array) . ") VALUES(";
-	    	// $output .= "'" . implode("','", $table_value_array) . "');\n";
-
-	    	// var_dump($output); 
-
+            }
+            // $this->unlockTable();
+            $this->downloadFile($output);
     	}
     }
-
+    
+     /*
+        TODO: Use Laravel Storage instead 
+      */ 
     public function downloadFile($output)
     {
     	$file_name = 'database_backup_on_' . date('y-m-d') . '.sql';
@@ -119,9 +102,28 @@ class BackupController extends Controller
     	header('Content-Transfer-Encoding: binary');
     	header("Expires: 0");
     	ob_clean();
+        // ob_end_clean(); 
     	flush();
     	readfile($file_name);
     	unlink($file_name);
 
+    }
+
+    public function getTableData($single_result, $table) 
+    {
+        $this->unlockTable();
+
+        $output = '';
+
+        foreach ($single_result as $key => $table_val) 
+        {  
+
+        $output .= "\nINSERT INTO $table("; // MAKE DYNAMIC INSERT
+        $output .= "" .implode(", ", array_keys($table_val)) . ") VALUES(";
+        $output .= "'" . implode("','", array_values($table_val)) . "');\n";
+
+        }
+
+        return $output;
     }
 }
