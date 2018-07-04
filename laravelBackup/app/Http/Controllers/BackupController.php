@@ -13,8 +13,11 @@ use DB;
 use App\Post;
 use App\User;
 
+date_default_timezone_set('Europe/Samara');
+
 class BackupController extends Controller
 {
+
 
     public function lockTable()
     {
@@ -84,29 +87,63 @@ class BackupController extends Controller
             }
             // $this->unlockTable();
             $this->downloadFile($output);
+            // $this->download($output);
     	}
     }
     
      /*
-        TODO: Use Laravel Storage instead 
+        Download the file from the browser  
       */ 
     public function downloadFile($output)
     {
-    	$file_name = 'database_backup_on_' . date('y-m-d') . '.sql';
+        $file_name = 'database_backup_on_' .date('y-m-d H-i-s')  . '.sql';
     	$file_handle = fopen($file_name, 'w+');
     	fwrite($file_handle, $output);
     	fclose($file_handle);
-    	header('Content-Description: File Transfer');
-    	header('Content-Type: application/octet-stream');
-    	header('Content-Disposition: attachment; filename=' . basename($file_name));
-    	header('Content-Transfer-Encoding: binary');
-    	header("Expires: 0");
-    	ob_clean();
-        // ob_end_clean(); 
-    	flush();
-    	readfile($file_name);
-    	unlink($file_name);
 
+        if (file_exists($file_name)) {
+    
+        	header('Content-Description: File Transfer');
+        	header('Content-Type: application/octet-stream');
+        	header('Content-Disposition: attachment; filename=' . basename($file_name));
+        	header('Content-Transfer-Encoding: binary');
+        	header("Expires: 0");
+        	ob_clean();
+            // ob_end_clean(); 
+        	flush();
+        	readfile($file_name);
+        	unlink($file_name);
+        }
+    }
+
+    // Stores the file in this location: storage/app
+    public function download($output)
+    {
+        // $time1 = Carbon::now()->toDateTimeString();
+        $file_name = 'backup_on[' . date('y-m-d H-i-s') . '].sql';
+
+        Storage::disk('local')->put($file_name, $output);
+
+        $exists = Storage::disk('local')->exists($file_name);
+
+        if ($exists) {
+            // $name_of_file = 'backup';
+            $headers = 
+            [
+            'Content-Description => File Transfer',
+            'Content-Type => application/octet-stream',
+            'Content-Disposition => attachment; filename=' . basename($file_name),
+            'Content-Transfer-Encoding => binary',
+            'Expires => 0',  
+            ob_clean(),
+            flush(),
+            // readfile($file_name),
+            // unlink($file_name)
+            ];
+
+        }
+
+        return Storage::download($file_name, $file_name, $headers);
     }
 
     public function getTableData($single_result, $table) 

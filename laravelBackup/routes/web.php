@@ -14,6 +14,8 @@ use App\Post;
 
 Route::get('/fill', function () {
 
+  // App::setLocale($locale);
+
 	$faker  = \Faker\Factory::create();
 
      foreach(range(1, 10) as $x) {
@@ -28,7 +30,7 @@ Route::get('/fill', function () {
 	// create 20 users with just one line
 	$users = factory(App\User::class, 20)->create();
     
-    return ;
+    return redirect('backup');
 });
 
 Route::get('/backup', 'BackupController@create');
