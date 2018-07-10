@@ -11,7 +11,7 @@
    <div class="row">
     <h2 align="center">Database Backup using PHP and MySQL</h2>
     <br />
-    <form method="POST" action="/backup" id="export_form">
+    <form method="POST" action="{{route('backup')}}" id="export_form">
       {{ csrf_field() }}
 
      <h3>Select Tables for Backup</h3>
