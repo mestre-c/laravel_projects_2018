@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Events\StatementPrepared; // set the fetch mode
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use DB;
 use App\Post;
@@ -29,7 +30,7 @@ class BackupController extends Controller
     {
         BackupTableJob::dispatch($job1, $job2)
             ->delay(Carbon::now()
-            ->addSeconds(5));
+            ->addSeconds(2));
         // Artisan::call('queue:work');     
     }
 
@@ -103,7 +104,8 @@ class BackupController extends Controller
             $output .= "\nINSERT INTO $table("; 
             $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
             $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
-        }   
+        }
+        $output = $this->cacheData($table, $output);   
         return $output;
     }
 
@@ -117,5 +119,18 @@ class BackupController extends Controller
             return true;
          } 
         return false;               
+    }
+
+    public function cacheData($table, $data)
+    {
+        // $table = $table;
+        $start = microtime(true);
+        $data = Cache::remember('table', 10, function() use ($table){
+            return DB::table($table)->get();
+        });
+        $duration = (microtime(true) -$start) * 1000;
+
+        \Log::info("From cache: " . $duration .' ms');
+        return $data;
     }
 }
