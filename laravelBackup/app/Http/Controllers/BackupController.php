@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use DB;
 use App\Post;
 use App\User;
+use App\Jobs\BackupTableJob;
+use Artisan;
 
 date_default_timezone_set('Europe/Samara');
 
@@ -21,6 +23,14 @@ class BackupController extends Controller
     {
         // lock all tables
         DB::unprepared('FLUSH TABLES WITH READ LOCK;');
+    }
+
+    public function setQueueJob($job1, $job2)
+    {
+        BackupTableJob::dispatch($job1, $job2)
+            ->delay(Carbon::now()
+            ->addSeconds(5));
+        // Artisan::call('queue:work');     
     }
 
     public function unlockTable()
@@ -55,12 +65,14 @@ class BackupController extends Controller
         $event->statement->setFetchMode(\PDO::FETCH_ASSOC);});
     }
 
-    public function backup(Request $request)
+    // public function backup(Request $request, User $user, Post $post)
+    public function backup(Request $request, User $user, Post $post)
     {
+        $this->setQueueJob($user, $post);            
     	if ($request->all()) {
     		$tables = request('table');
     		$output = '';     
-        	foreach ($tables as $key => $table) {   
+        	foreach ($tables as $key => $table) {  
                 $this->lockTable();
     			$show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
     			$output .="\n" . $show_table_query[1] . ";\n";
