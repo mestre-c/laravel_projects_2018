@@ -15,7 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 
 class BackupTableJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable; //SerializesModels;
 
     protected $user;
     protected $post;
@@ -39,8 +39,7 @@ class BackupTableJob implements ShouldQueue
      */
     public function handle()
     {
-        // //
-        // $bup = new BackupController;
-        // $bup->backup($request, $this->user, $this->post);
+     // $this->users->save();
+     // $this->posts->save();
     }
 }

@@ -26,11 +26,11 @@ class BackupController extends Controller
         DB::unprepared('FLUSH TABLES WITH READ LOCK;');
     }
 
-    public function setQueueJob($job1, $job2)
+    public function setQueueJob(User $user, Post $post)
     {
-        BackupTableJob::dispatch($job1, $job2)
+        BackupTableJob::dispatch($user, $post)
             ->delay(Carbon::now()
-            ->addSeconds(5));
+            ->addSeconds(2));
         // Artisan::call('queue:work');     
     }
 
@@ -69,7 +69,7 @@ class BackupController extends Controller
     // public function backup(Request $request, User $user, Post $post)
     public function backup(Request $request, User $user, Post $post)
     {
-        $this->setQueueJob($user, $post);           
+        $this->setQueueJob($user, $post);          
     	if ($request->all()) {
     		$tables = request('table');
     		$output = '';     
@@ -108,7 +108,7 @@ class BackupController extends Controller
                 $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
             }  
         }
-        // $output = $this->cacheData($table, $output);   
+        // $output .= $this->cacheData($table, $output);   
         return $output;
     }
 
