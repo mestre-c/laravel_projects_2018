@@ -61,4 +61,4 @@ $response->send();
 $kernel->terminate($request, $response);
 
 ini_set('max_execution_time', 300);
-ini_set('memory_limit', '200000KB');
+ini_set('memory_limit', '35MB');

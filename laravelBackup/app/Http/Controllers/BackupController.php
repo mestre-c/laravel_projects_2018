@@ -17,8 +17,7 @@ date_default_timezone_set('Europe/Samara');
 
 class BackupController extends Controller
 {
-    const MAX_VALUE = 200000; //kilobytes 
-    // const MAX_VALUE = 9; //kilobytes 
+    const MAX_VALUE = 35000; //kilobytes 
 
     public function lockTable()
     {
@@ -69,7 +68,7 @@ class BackupController extends Controller
     // public function backup(Request $request, User $user, Post $post)
     public function backup(Request $request, User $user, Post $post)
     {
-        $this->setQueueJob($user, $post);            
+        $this->setQueueJob($user, $post);           
     	if ($request->all()) {
     		$tables = request('table');
     		$output = '';     
@@ -80,6 +79,7 @@ class BackupController extends Controller
                 $this->setPdoMode();
         		$single_result = DB::select("SELECT * FROM {$table}");
                 $output .= $this->getTableData($single_result, $table);
+                $output .= $this->cacheData($table, $output); 
             }
             if ($this->checkFileSize($output)) {
                 return redirect()->route('create'); 
@@ -105,7 +105,7 @@ class BackupController extends Controller
             $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
             $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
         }
-        $output = $this->cacheData($table, $output);   
+        // $output = $this->cacheData($table, $output);   
         return $output;
     }
 
@@ -132,5 +132,14 @@ class BackupController extends Controller
 
         \Log::info("From cache: " . $duration .' ms');
         return $data;
+    }
+
+    // Not working
+    public function setTimeAndMemoryLimit()
+    {
+        // Temporarily increase memory limit to 35MB
+        ini_set('memory_limit','35MB');
+        ini_set('max_execution_time', 300);
+        return require __DIR__.'/../../bootstrap/app.php';
     }
 }
