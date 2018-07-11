@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Events\StatementPrepared; // set the fetch mode
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 use DB;
 use App\Post;
 use App\User;
@@ -29,7 +30,7 @@ class BackupController extends Controller
     {
         BackupTableJob::dispatch($job1, $job2)
             ->delay(Carbon::now()
-            ->addSeconds(2));
+            ->addSeconds(5));
         // Artisan::call('queue:work');     
     }
 
@@ -100,10 +101,12 @@ class BackupController extends Controller
     {
         $this->unlockTable();
         $output = '';
-        foreach ($single_result as $key => $table_val) {  
-            $output .= "\nINSERT INTO $table("; 
-            $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
-            $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
+        foreach ($single_result as $key => $table_val) {
+            if ($table === "posts" || $table === "users") {
+                $output .= "\nINSERT INTO $table("; 
+                $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
+                $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
+            }  
         }
         // $output = $this->cacheData($table, $output);   
         return $output;
