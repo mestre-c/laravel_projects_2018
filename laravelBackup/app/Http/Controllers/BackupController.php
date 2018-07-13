@@ -18,7 +18,7 @@ date_default_timezone_set('Europe/Samara');
 
 class BackupController extends Controller
 {
-    const MAX_VALUE = 33000; //kilobytes 
+    const MAX_VALUE = 100000; //kilobytes 
 
     public function lockTable()
     {
@@ -63,7 +63,8 @@ class BackupController extends Controller
     public function setPdoMode()
     {
     	\Event::listen(StatementPrepared::class, function($event) {
-        $event->statement->setFetchMode(\PDO::FETCH_ASSOC);});
+        // $event->statement->setFetchMode(\PDO::FETCH_ASSOC);});
+        $event->statement->setFetchMode(\PDO::FETCH_BOTH);});
     }
 
     // public function backup(Request $request, User $user, Post $post)
@@ -75,13 +76,13 @@ class BackupController extends Controller
     		$output = '';     
         	foreach ($tables as $key => $table) {  
                 $this->lockTable();
-    			$show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
-    			$output .="\n" . $show_table_query[1] . ";\n";
+                $show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
                 $this->setPdoMode();
+                $show_table_query = DB::select("SHOW CREATE TABLE {$table}");
+                $output .="\n" . $show_table_query[0][1] . ";\n";
+    			// $output .="\n" . $show_table_query[1] . ";\n";
         		// $single_result = DB::select("SELECT * FROM {$table}");
-                // dd($single_result);
                 $single_result = $this->chunkData($table);
-                // dd($single_result);
                 $output .= $this->getTableData($single_result, $table);
                 $output .= $this->cacheData($table, $output); 
             }
@@ -110,8 +111,7 @@ class BackupController extends Controller
                 $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
                 $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
             }  
-        }
-        // $output .= $this->cacheData($table, $output);   
+        }  
         return $output;
     }
 
@@ -130,7 +130,6 @@ class BackupController extends Controller
 
     public function cacheData($table, $data)
     {
-        // $table = $table;
         $start = microtime(true);
         $data = Cache::remember('table', 10, function() use ($table){
             return DB::table($table)->get();
@@ -141,18 +140,9 @@ class BackupController extends Controller
         return $data;
     }
 
-    // Not working
-    public function setTimeAndMemoryLimit()
-    {
-        // Temporarily increase memory limit to 35MB
-        ini_set('memory_limit','35MB');
-        ini_set('max_execution_time', 300);
-        return require __DIR__.'/../../bootstrap/app.php';
-    }
-
     public function chunkData($table)
     {
-        $result = [];
+        $result;
         if ($table == 'posts' || $table == 'users') {
             $table = 'App\\' . ucwords(rtrim($table,'s')); 
             $table::chunk(200, function($models) use (&$result) {
@@ -160,10 +150,8 @@ class BackupController extends Controller
                    $result[] = $model->toArray();
                    // var_dump($result);
                 }
-             });
-                            
+             });                  
              return $result;
-        }
-
+        } 
     }  
 }
