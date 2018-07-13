@@ -18,7 +18,7 @@ date_default_timezone_set('Europe/Samara');
 
 class BackupController extends Controller
 {
-    const MAX_VALUE = 35000; //kilobytes 
+    const MAX_VALUE = 33000; //kilobytes 
 
     public function lockTable()
     {
@@ -30,7 +30,7 @@ class BackupController extends Controller
     {
         BackupTableJob::dispatch($user, $post)
             ->delay(Carbon::now()
-            ->addSeconds(2));
+            ->addSeconds(5));
         // Artisan::call('queue:work');     
     }
 
@@ -78,7 +78,10 @@ class BackupController extends Controller
     			$show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
     			$output .="\n" . $show_table_query[1] . ";\n";
                 $this->setPdoMode();
-        		$single_result = DB::select("SELECT * FROM {$table}");
+        		// $single_result = DB::select("SELECT * FROM {$table}");
+                // dd($single_result);
+                $single_result = $this->chunkData($table);
+                // dd($single_result);
                 $output .= $this->getTableData($single_result, $table);
                 $output .= $this->cacheData($table, $output); 
             }
@@ -117,6 +120,7 @@ class BackupController extends Controller
         $file_size = strlen($file);
         // convert bytes to kilobytes 
         $file_size = round($file_size / 1024, 0, PHP_ROUND_HALF_UP);
+        // dd($file_size);  
         if ($file_size <= self::MAX_VALUE) {
             $this->download($file);
             return true;
@@ -145,4 +149,21 @@ class BackupController extends Controller
         ini_set('max_execution_time', 300);
         return require __DIR__.'/../../bootstrap/app.php';
     }
+
+    public function chunkData($table)
+    {
+        $result = [];
+        if ($table == 'posts' || $table == 'users') {
+            $table = 'App\\' . ucwords(rtrim($table,'s')); 
+            $table::chunk(200, function($models) use (&$result) {
+                foreach ($models as $model) {
+                   $result[] = $model->toArray();
+                   // var_dump($result);
+                }
+             });
+                            
+             return $result;
+        }
+
+    }  
 }

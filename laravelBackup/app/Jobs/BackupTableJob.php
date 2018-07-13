@@ -39,7 +39,7 @@ class BackupTableJob implements ShouldQueue
      */
     public function handle()
     {
-     // $this->users->save();
-     // $this->posts->save();
+     // $this->user->save();
+     // $this->post->save();
     }
 }
