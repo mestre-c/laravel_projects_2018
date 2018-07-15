@@ -8,6 +8,7 @@ use Illuminate\Database\Events\StatementPrepared; // set the fetch mode
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
+use League\Flysystem\Adapter\Local;
 use DB;
 use App\Post;
 use App\User;
@@ -18,7 +19,8 @@ date_default_timezone_set('Europe/Samara');
 
 class BackupController extends Controller
 {
-    const MAX_VALUE = 100000; //kilobytes 
+    // const MAX_VALUE = 100000; //kilobytes 
+    const CHUNK_SIZE = 1024*1024; //size in bytes
 
     public function lockTable()
     {
@@ -77,20 +79,22 @@ class BackupController extends Controller
         	foreach ($tables as $key => $table) {  
                 $this->lockTable();
                 $show_table_query = $this->queryFetch("SHOW CREATE TABLE {$table}");
-                $this->setPdoMode();
-                $show_table_query = DB::select("SHOW CREATE TABLE {$table}");
-                $output .="\n" . $show_table_query[0][1] . ";\n";
-    			// $output .="\n" . $show_table_query[1] . ";\n";
+                // $this->setPdoMode();
+                // $show_table_query = DB::select("SHOW CREATE TABLE {$table}");
+                // $output .="\n" . $show_table_query[0][1] . ";\n";
+    			$output .="\n" . $show_table_query[1] . ";\n";
         		// $single_result = DB::select("SELECT * FROM {$table}");
                 $single_result = $this->chunkData($table);
                 $output .= $this->getTableData($single_result, $table);
                 $output .= $this->cacheData($table, $output); 
             }
-            if ($this->checkFileSize($output)) {
-                return redirect()->route('create'); 
-            }                  
+
+            // $this->download($output);
+            $this->downloadEff($output);
+            return redirect()->route('create');                  
 	    }             
-            return redirect()->route('backupError'); 
+            return redirect()->route('create'); 
+            // return redirect()->route('backupError'); 
     }
 
     // Stores the file in this location: storage/app
@@ -98,13 +102,45 @@ class BackupController extends Controller
     {
         $dt = Carbon::now();
         $file_name = 'backup_on[' . $dt->format('y-m-d H-i-s') . '].sql';
-        Storage::disk('local')->put($file_name, $output);
+        $local_disk = Storage::disk('local');
+        if (!$local_disk->exists($file_name)) {
+            $output = $this->readFileChunked($file_name, $output); // chunk a file
+            // $output = $this->readTheFile($file_name, $output); // chunk a file
+            $local_disk->put($file_name, $output); // store file
+            \Log::info($this->formatBytes(memory_get_peak_usage()));
+        }
+    }
+
+    public function downloadEff($output)
+    {
+      $dt = Carbon::now();
+      $file_name = 'backup_on[' . $dt->format('y-m-d H-i-s') . '].sql';
+      $local_disk = Storage::disk('local');
+
+      if (!$local_disk->exists($file_name)) {
+          $file_handle = fopen($file_name, 'w+'); // Open for reading and writing
+          $local_disk->put($file_name, $file_handle);
+          $local_disk->put($file_name, $output);
+          fwrite($file_handle, $output);// write to a file
+          fclose($file_handle);
+          header('Content-Description: File Transfer');
+          header('Content-Type: application/octet-stream');
+          header('Content-Disposition: attachment; filename=' . basename($file_name));
+          header('Content-Transfer-Encoding: binary'); 
+          header("Expires: 0");
+          ob_clean(); // clean the output buffer
+          flush(); // flush the system output buffer
+          readfile($file_name); // output a file
+          unlink($file_name); // remove SQL files which is generated in folder
+          \Log::info($this->formatBytes(memory_get_peak_usage()));
+      }    
     }
 
     public function getTableData($single_result, $table) 
     {
         $this->unlockTable();
         $output = '';
+        // dd($single_result);
         foreach ($single_result as $key => $table_val) {
             if ($table === "posts" || $table === "users") {
                 $output .= "\nINSERT INTO $table("; 
@@ -113,19 +149,6 @@ class BackupController extends Controller
             }  
         }  
         return $output;
-    }
-
-    public function checkFileSize($file)
-    {
-        $file_size = strlen($file);
-        // convert bytes to kilobytes 
-        $file_size = round($file_size / 1024, 0, PHP_ROUND_HALF_UP);
-        // dd($file_size);  
-        if ($file_size <= self::MAX_VALUE) {
-            $this->download($file);
-            return true;
-         } 
-        return false;               
     }
 
     public function cacheData($table, $data)
@@ -143,15 +166,73 @@ class BackupController extends Controller
     public function chunkData($table)
     {
         $result;
-        if ($table == 'posts' || $table == 'users') {
-            $table = 'App\\' . ucwords(rtrim($table,'s')); 
-            $table::chunk(200, function($models) use (&$result) {
-                foreach ($models as $model) {
-                   $result[] = $model->toArray();
+        $table = 'App\\' . ucwords(rtrim($table,'s')); 
+        $table::chunk(200, function($models) use (&$result) {
+        foreach ($models as $model) {
+            $result[] = $model->toArray();
                    // var_dump($result);
-                }
-             });                  
-             return $result;
-        } 
-    }  
+        }});                  
+             return $result;      
+    }
+
+    // Use generators
+    public function readTheFile($file, $output)
+    {
+        // $handle = fopen($file, "rb");
+        $handle = fopen($file, "w+b");
+        if ($handle === false) {
+            return false;
+        }
+        fwrite($handle, $output);
+        while(!feof($handle)) {
+            yield trim(fgets($handle));
+        }
+        fclose($handle);
+        return $output;
+    }
+    // chunk file
+    public function readFileChunked($filename, $output, $retbytes = TRUE)
+    {
+        $buffer = "";
+        $cnt =0;
+        // $handle = fopen($filename, "rb");
+        $handle = fopen($filename, "w+");
+        if ($handle === false) {
+            return false;
+        }
+        fwrite($handle, $output);
+        while (!feof($handle)) {
+            $buffer = fread($handle, self::CHUNK_SIZE);
+            echo $buffer;
+            ob_flush();
+            flush();
+            if ($retbytes) {
+                $cnt += strlen($buffer);
+            }
+        }
+        // $status = fclose($handle);
+        // if ($retbytes === $status) {
+        //     return $cnt; // return num. bytes delivered like readfile() does.
+        // }
+        //     return $status;
+        fclose($handle);
+        \Log::info($this->formatBytes(memory_get_peak_usage()));
+        return $output;
+    }
+
+    function formatBytes($bytes, $precision = 2) 
+    {
+        $units = ["b", "kb", "mb", "gb", "tb"];
+
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+
+        $bytes /= (1 << (10 * $pow));
+
+        return round($bytes, $precision) . " " . $units[$pow];
+    }
+
+    
+
 }

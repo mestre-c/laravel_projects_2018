@@ -25,6 +25,9 @@
       
     
     @foreach($numTables as $table)
+    @if($table['Tables_in_backup'] == 'cache' || $table['Tables_in_backup'] == 'migrations'
+    || $table['Tables_in_backup'] == 'jobs' || $table['Tables_in_backup'] == 'failed_jobs') @continue
+    @else
      <div class="checkbox">
       <label>
         <input type="checkbox" class="checkbox_table" name="table[]" 
@@ -32,6 +35,7 @@
         {{ $table['Tables_in_backup'] }}
       </label>
      </div>
+     @endif
     @endforeach 
     
      <div class="form-group">
