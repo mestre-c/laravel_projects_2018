@@ -129,8 +129,8 @@ class BackupController extends Controller
           header("Expires: 0");
           ob_clean(); // clean the output buffer
           flush(); // flush the system output buffer
-          //$this->readFileChunked($file_name); // output a file
-          readfile($file_name); // output a file
+          $this->readFileChunked($file_name); // output a file
+          // readfile($file_name); // output a file
           unlink($file_name); // remove SQL files which is generated in folder
           \Log::info($this->formatBytes(memory_get_peak_usage()));  
       }
