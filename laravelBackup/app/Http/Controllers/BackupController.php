@@ -72,7 +72,7 @@ class BackupController extends Controller
     // public function backup(Request $request, User $user, Post $post)
     public function backup(Request $request, User $user, Post $post)
     {
-        $this->setQueueJob($user, $post);          
+        // $this->setQueueJob($user, $post);          
     	if ($request->all()) {
     		$tables = request('table');
     		$output = '';     
@@ -90,10 +90,10 @@ class BackupController extends Controller
             }
 
             // $this->download($output);
-            $this->downloadEff($output);
+            $this->downloadFile($output);
             return redirect()->route('create');                  
 	    }             
-            return redirect()->route('create'); 
+            // return redirect()->route('create'); 
             // return redirect()->route('backupError'); 
     }
 
@@ -110,8 +110,8 @@ class BackupController extends Controller
             \Log::info($this->formatBytes(memory_get_peak_usage()));
         }
     }
-
-    public function downloadEff($output)
+    // download file into storage/app
+    public function downloadFile($output)
     {
       $dt = Carbon::now();
       $file_name = 'backup_on[' . $dt->format('y-m-d H-i-s') . '].sql';
@@ -119,9 +119,8 @@ class BackupController extends Controller
 
       if (!$local_disk->exists($file_name)) {
           $file_handle = fopen($file_name, 'w+'); // Open for reading and writing
-          $local_disk->put($file_name, $file_handle);
-          $local_disk->put($file_name, $output);
           fwrite($file_handle, $output);// write to a file
+          $local_disk->put($file_name, $output);
           fclose($file_handle);
           header('Content-Description: File Transfer');
           header('Content-Type: application/octet-stream');
@@ -130,23 +129,24 @@ class BackupController extends Controller
           header("Expires: 0");
           ob_clean(); // clean the output buffer
           flush(); // flush the system output buffer
+          //$this->readFileChunked($file_name); // output a file
           readfile($file_name); // output a file
           unlink($file_name); // remove SQL files which is generated in folder
-          \Log::info($this->formatBytes(memory_get_peak_usage()));
-      }    
+          \Log::info($this->formatBytes(memory_get_peak_usage()));  
+      }
+          return redirect()->route('backup');    
     }
 
     public function getTableData($single_result, $table) 
     {
         $this->unlockTable();
         $output = '';
-        // dd($single_result);
         foreach ($single_result as $key => $table_val) {
-            if ($table === "posts" || $table === "users") {
+            // if ($table === "posts" || $table === "users") {
                 $output .= "\nINSERT INTO $table("; 
                 $output .= "" .addslashes(implode(", ", array_keys($table_val))) . ") VALUES(";
                 $output .= "'" . addslashes(implode("','", array_values($table_val))) . "');\n";
-            }  
+            // }  
         }  
         return $output;
     }
@@ -175,32 +175,17 @@ class BackupController extends Controller
              return $result;      
     }
 
-    // Use generators
-    public function readTheFile($file, $output)
-    {
-        // $handle = fopen($file, "rb");
-        $handle = fopen($file, "w+b");
-        if ($handle === false) {
-            return false;
-        }
-        fwrite($handle, $output);
-        while(!feof($handle)) {
-            yield trim(fgets($handle));
-        }
-        fclose($handle);
-        return $output;
-    }
     // chunk file
-    public function readFileChunked($filename, $output, $retbytes = TRUE)
+    public function readFileChunked($filename, $retbytes = TRUE)
     {
         $buffer = "";
         $cnt =0;
-        // $handle = fopen($filename, "rb");
-        $handle = fopen($filename, "w+");
+        $handle = fopen($filename, "rb");
+        // $handle = fopen($filename, "w+");
         if ($handle === false) {
             return false;
         }
-        fwrite($handle, $output);
+        // fwrite($handle, $output);
         while (!feof($handle)) {
             $buffer = fread($handle, self::CHUNK_SIZE);
             echo $buffer;
@@ -210,14 +195,14 @@ class BackupController extends Controller
                 $cnt += strlen($buffer);
             }
         }
-        // $status = fclose($handle);
-        // if ($retbytes === $status) {
-        //     return $cnt; // return num. bytes delivered like readfile() does.
-        // }
-        //     return $status;
-        fclose($handle);
+        $status = fclose($handle);
+        if ($retbytes === $status) {
+            return $cnt; // return num. bytes delivered like readfile() does.
+        }
+            return $status;
+        // fclose($handle);
         \Log::info($this->formatBytes(memory_get_peak_usage()));
-        return $output;
+        // return $output;
     }
 
     function formatBytes($bytes, $precision = 2) 
@@ -231,6 +216,22 @@ class BackupController extends Controller
         $bytes /= (1 << (10 * $pow));
 
         return round($bytes, $precision) . " " . $units[$pow];
+    }
+
+    // Use generators
+    public function readTheFile($file)
+    {
+        $handle = fopen($file, "rb");
+        // $handle = fopen($file, "w+b");
+        if ($handle === false) {
+            return false;
+        }
+        fwrite($handle, $output);
+        while(!feof($handle)) {
+            yield trim(fgets($handle));
+        }
+        fclose($handle);
+        // return $output;
     }
 
     
